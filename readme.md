@@ -1,1 +1,1 @@
-some common utilities and patters for kibo-ng themes
+some common utilities and patterns for kibo-ng themes
