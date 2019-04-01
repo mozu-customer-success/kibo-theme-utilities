@@ -8,7 +8,7 @@
     "build": "rollup -c"
   },
   "keywords": [],
-  "author": "",
+  "author": "Kevin Brown",
   "license": "ISC",
   "devDependencies": {
     "@babel/core": "^7.4.0",
