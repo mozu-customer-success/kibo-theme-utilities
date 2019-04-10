@@ -1,30 +1,29 @@
-import context from "./context";
-import Backbone from "backbone";
-import _ from "underscore";
-import api from "modules/api";
-import $ from "modules/jquery-mozu";
+import clone from "ramda/src/clone";
+import curry from "ramda/src/curry";
 
-const noop = () => {};
-const id = x => x;
-const head = list => (list && list[0]) || [];
-const tail = list => (list && list.slice && list.slice(1)) || [];
-const flip = f => (a, b, ...args) => f(b, a, ...args);
+export const $ = document.querySelector;
+export const $$ = document.querySelectorAll;
 
-const _curryN = (len, fn) => (...args) => {
-  if (args.length >= len) return fn(...args);
-  if (!args.length) return fn;
-  return _curryN(len, fn).bind(null, ...args);
-};
+export const noop = () => {};
+export const id = x => x;
+export const head = list => (list && list[0]) || [];
+export const tail = list => (list && list.slice && list.slice(1)) || [];
 
-const curry = fn => (...args) => {
-  return args.length === fn.length
-    ? fn(...args)
-    : _curryN(fn.length, fn)(...args);
-};
+// export const _curryN = (len, fn) => (...args) => {
+//   if (args.length >= len) return fn(...args);
+//   if (!args.length) return fn;
+//   return _curryN(len, fn).bind(null, ...args);
+// };
 
-const curryN = curry(_curryN);
+// export const curry = fn => (...args) => {
+//   return args.length === fn.length
+//     ? fn(...args)
+//     : _curryN(fn.length, fn)(...args);
+// };
 
-const lens = curry((path, obj) => {
+// export const curryN = curry(_curryN);
+
+export const lens = curry((path, obj) => {
   path = type.isString(path) ? path.split(".") : path;
   if (!obj || !type.isObject(obj)) return obj;
   if (path === []) return obj;
@@ -34,7 +33,11 @@ const lens = curry((path, obj) => {
   return lens(tail(path), obj[head(path)]);
 });
 
-const type = [
+export const mixin = (proto, ...sources) => {
+  return Object.assign(Object.create(proto), ...sources);
+};
+
+export const type = [
   "Object",
   "Null",
   "Undefined",
@@ -99,7 +102,7 @@ function memoize(fn, timeout, context) {
   };
 }
 
-var storage = function(source) {
+var storage = function(source, context) {
   var store = {
     set: function(key, val, expires) {
       try {
@@ -113,7 +116,7 @@ var storage = function(source) {
         }
         //at the risk of losing data dont cache apiobjects
         var ctx = dive("api.context", val);
-        if (val.data && ctx instanceof api.context.constructor) {
+        if (val.data && val.type /*ctx instanceof api.context.constructor*/) {
           val = { data: val.data, type: val.type };
         }
         source.setItem(
@@ -159,7 +162,7 @@ var localStorage = storage(window.localStorage);
 function promiseProp(value, promise) {
   if (!value && promise && promise.then) {
     promise.then(function(res) {
-      value = _.clone(res);
+      value = clone(res);
       return res;
     });
   }
@@ -169,7 +172,7 @@ function promiseProp(value, promise) {
       if (!promise) return Promise.reject(null);
       if (promise.then) return promise;
       promise = promise().then(function(res) {
-        value = _.clone(res);
+        value = clone(res);
         return res;
       });
       return promise;
@@ -190,9 +193,7 @@ function clearCache(version) {
   }
 }
 
-clearCache(context.themeSettings.cacheVersion || 1);
-
-let limitLogExposure = (() => {
+let limitLogExposure = context => {
   let enabled;
   let l = console.log.bind(console);
   return enable => {
@@ -203,20 +204,33 @@ let limitLogExposure = (() => {
     }
     console.log = enabled ? l : x => x;
   };
-})();
+};
 
-let globalEventBus = Backbone.events;
+let log = (...args) => {
+  console.log(args);
+  return args[0];
+};
+
+let once = f => {
+  let a = 0;
+  let value;
+  return function(...args) {
+    if (a) return value;
+    a = 1;
+    return (value = f.apply(this, args));
+  };
+};
 
 export default {
   limitLogExposure,
-  globalEventBus,
+  // globalEventBus,
   noop,
+  log,
+  once,
   id,
   type,
   head,
   tail,
-  curry,
-  curryN,
   lens,
   hashCode,
   memoize,
@@ -224,6 +238,9 @@ export default {
   localStorage,
   promiseProp,
   clearCache,
+  mixin,
+  $,
+  $$,
   printDiv: function(elemIdentifier) {
     var $divToPrint = $(elemIdentifier);
     var newWindow = window.open();
@@ -235,7 +252,7 @@ export default {
   },
   prop: function(v, pure = false) {
     var property = function(x) {
-      if (x !== undefined) v = pure ? _.clone(x) : x;
+      if (x !== undefined) v = pure ? clone(x) : x;
       return v;
     };
     property.isProp = true;
