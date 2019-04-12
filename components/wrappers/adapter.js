@@ -5,18 +5,18 @@ import curryN from "ramda/src/curryN";
 export let adapters = {};
 
 export default curryN(2, (options = {}, WrappedComponent) => {
-  let { adapters = [], id = "#meToo" } = options;
-  WrappedComponent.adapters = adapters.reduce((acc, key) => {
-    if (type.isFunction(adapters[key]))
-      acc[key] = adapters[key](options, WrappedComponent);
-    return acc;
-  }, {});
+  // let { adapters = [], name = "meToo" } = options;
+  // WrappedComponent.adapters = adapters.reduce((acc, key) => {
+  //   if (type.isFunction(adapters[key]))
+  //     acc[key] = adapters[key](options, WrappedComponent);
+  //   return acc;
+  // }, {});
 
-  id = id || WrappedComponent.id;
+  let id = WrappedComponent.properties.id;
 
-  WrappedComponent.render = (props = {}) =>
+  WrappedComponent.methods.render = (props = {}) =>
     render(
-      h(WrappedComponent, Object.assign({ id }, props)),
+      h(WrappedComponent, props),
       document.getElementById(id + "-container")
     );
 

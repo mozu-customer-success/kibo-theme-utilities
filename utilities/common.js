@@ -26,7 +26,7 @@ export const tail = list => (list && list.slice && list.slice(1)) || [];
 export const lens = curry((path, obj) => {
   path = type.isString(path) ? path.split(".") : path;
   if (!obj || !type.isObject(obj)) return obj;
-  if (path === []) return obj;
+  if (!path.length) return obj;
   let key = head(path);
   if (key === "") key = "attributes";
   if (!(key in obj)) return null;
@@ -45,7 +45,8 @@ export const type = [
   "Number",
   "String",
   "Function",
-  "Boolean"
+  "Boolean",
+  "Promise"
 ].reduce(
   (a, t) => {
     a[`is${t}`] = v => a(v) === t;
@@ -59,6 +60,9 @@ export const type = [
       : Object.prototype.toString.call(val).slice(8, -1);
   }
 );
+
+export const isPromise = obj =>
+  obj && (type.isPromise(obj) || (obj.then && obj.reject));
 
 function hashCode(str) {
   var hash = 0;
@@ -239,6 +243,7 @@ export default {
   promiseProp,
   clearCache,
   mixin,
+  isPromise,
   $,
   $$,
   printDiv: function(elemIdentifier) {

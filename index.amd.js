@@ -1,7 +1,7 @@
-define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprContext, jqueryMozu, underscore) { 'use strict';
+define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprContext, $$1, underscore) { 'use strict';
 
   hyprContext = hyprContext && hyprContext.hasOwnProperty('default') ? hyprContext['default'] : hyprContext;
-  jqueryMozu = jqueryMozu && jqueryMozu.hasOwnProperty('default') ? jqueryMozu['default'] : jqueryMozu;
+  $$1 = $$1 && $$1.hasOwnProperty('default') ? $$1['default'] : $$1;
   underscore = underscore && underscore.hasOwnProperty('default') ? underscore['default'] : underscore;
 
   var hasOwnProperty = {}.hasOwnProperty;
@@ -1993,21 +1993,6 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     return _typeof(obj);
   }
 
-  function _defineProperty(obj, key, value) {
-    if (key in obj) {
-      Object.defineProperty(obj, key, {
-        value: value,
-        enumerable: true,
-        configurable: true,
-        writable: true
-      });
-    } else {
-      obj[key] = value;
-    }
-
-    return obj;
-  }
-
   function _taggedTemplateLiteral(strings, raw) {
     if (!raw) {
       raw = strings.slice(0);
@@ -2116,10 +2101,10 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
    */
 
 
-  var type$1 = /*#__PURE__*/_curry1_1(function type(val) {
+  var type = /*#__PURE__*/_curry1_1(function type(val) {
     return val === null ? 'Null' : val === undefined ? 'Undefined' : Object.prototype.toString.call(val).slice(8, -1);
   });
-  var type_1 = type$1;
+  var type_1 = type;
 
   /**
    * Copies an object.
@@ -2437,9 +2422,9 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   // export const curryN = curry(_curryN);
 
   var lens = curry_1(function (path, obj) {
-    path = type$2.isString(path) ? path.split(".") : path;
-    if (!obj || !type$2.isObject(obj)) return obj;
-    if (path === []) return obj;
+    path = type$1.isString(path) ? path.split(".") : path;
+    if (!obj || !type$1.isObject(obj)) return obj;
+    if (!path.length) return obj;
     var key = head$1(path);
     if (key === "") key = "attributes";
     if (!(key in obj)) return null;
@@ -2452,7 +2437,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
 
     return Object.assign.apply(Object, [Object.create(proto)].concat(sources));
   };
-  var type$2 = ["Object", "Null", "Undefined", "Array", "Number", "String", "Function", "Boolean"].reduce(function (a, t) {
+  var type$1 = ["Object", "Null", "Undefined", "Array", "Number", "String", "Function", "Boolean", "Promise"].reduce(function (a, t) {
     a["is".concat(t)] = function (v) {
       return a(v) === t;
     };
@@ -2461,6 +2446,9 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   }, function (val) {
     return val === null ? "Null" : val === undefined ? "Undefined" : Object.prototype.toString.call(val).slice(8, -1);
   });
+  var isPromise = function isPromise(obj) {
+    return obj && (type$1.isPromise(obj) || obj.then && obj.reject);
+  };
 
   function hashCode(str) {
     var hash = 0;
@@ -2654,7 +2642,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     log: log,
     once: once,
     id: id$1,
-    type: type$2,
+    type: type$1,
     head: head$1,
     tail: tail,
     lens: lens,
@@ -2665,6 +2653,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     promiseProp: promiseProp,
     clearCache: clearCache,
     mixin: mixin,
+    isPromise: isPromise,
     $: $,
     $$: $$,
     printDiv: function printDiv(elemIdentifier) {
@@ -4879,7 +4868,21 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     return result
   }
 
+  function _templateObject() {
+    var data = _taggedTemplateLiteral(["\n    <div>", "</div>\n  "]);
+
+    _templateObject = function _templateObject() {
+      return data;
+    };
+
+    return data;
+  }
   var html$1 = htm.bind(h);
+  var Fragment = function Fragment(_ref) {
+    var _ref$children = _ref.children,
+        children = _ref$children === void 0 ? [] : _ref$children;
+    return html$1(_templateObject(), children);
+  };
   var validations = {
     Function: function Function(validator, path, value) {
       var result = validator(value);
@@ -4905,7 +4908,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
         var stringValidator = stringValidations[validator];
         if (!stringValidator) return null;
         var result = stringValidator(value);
-        return result && _defineProperty({}, path, result) || null;
+        return result || null;
       };
     }()
   };
@@ -4926,33 +4929,65 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
 
     if (Object.keys(validation).length) return flat.unflatten(validation);else return null;
   }); //this should be re-written as a compose function that allows you to add functionality
-  var useReducer = function () {
-    var _state = {};
-    return function (reducer) {
-      var _this = this;
+  //in wrappers that get merged together instead of lost in the closure
 
-      var initialState = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-      _state = umd(initialState, _state);
+  var composeWrappers = function composeWrappers() {
+    for (var _len = arguments.length, wrappers = new Array(_len), _key = 0; _key < _len; _key++) {
+      wrappers[_key] = arguments[_key];
+    }
 
-      reducer = reducer || function () {
-        return _state;
-      };
-
-      return [_state, function (action) {
-        var newState = reducer(_state, action);
-
-        if (newState instanceof Promise || newState && newState.then && newState.catch) {
-          return newState.then(function (response) {
-            _state = response;
-
-            _this.setState({});
-          });
-        } else _state = newState;
-
-        _this.setState({});
-      }];
+    return function (component) {
+      component.properties = component.properties || {};
+      component.methods = component.methods || {};
+      return wrappers.reverse().reduce(function (comp, wrap) {
+        var props = comp.properties;
+        var methods = comp.methods;
+        comp = wrap(comp);
+        comp.properties = Object.assign(props, comp.properties || {});
+        comp.methods = Object.assign(methods, comp.methods || {});
+        return comp;
+      }, component);
     };
-  }();
+  }; // export let createReducer = (request, actions) => (state, action) =>
+  //   action && actions[action.id]
+  //     ? actions[action.id].call(request, state, action)
+  //     : util.log(state, `invalid action ${action && action.id}`);
+  // export let useReducer = (() => {
+  //   let _actions = {}
+  //   let reducer = x => x
+  //   let dispatch = function(action) {
+  //     let newState = reducer(_state, action);
+  //     if (util.isPromise(newState)) {
+  //       return newState.then(response => {
+  //         _state = response;
+  //         if (this.setState && !action.silent) this.setState({});
+  //       });
+  //     }
+  //     _state = newState;
+  //     if (this.setState && !action.silent) this.setState({});
+  //   };
+  //   let create = function(
+  //     actions = {},
+  //     initialState = {},
+  //     initialAction
+  //   ) {
+  //     //this is root node of component
+  //     _actions = Object.assign(_actions, flatten(actions, " "));
+  //     if (initialAction) {
+  //       dispatch.call(
+  //         this,
+  //         reducer,
+  //         Object.assign(initialAction, { silent: true })
+  //       );
+  //     }
+  //     return [_state, dispatch.bind(this, reducer)];
+  //   };
+  //   //global dispatch
+  //   reduce.getState = () => _state;
+  //   reduce.
+  //   return create;
+  // })();
+
   var createVm = function createVm(viewActions) {
     return function (dispatch) {
       return map_1(function (handler) {
@@ -4963,8 +4998,79 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   var tools = {
     html: html$1,
     preact: preact$1,
-    validate: validate
+    validate: validate,
+    composeWrappers: composeWrappers
   };
+
+  var nativeForEach = [].forEach;
+  var internalForEach = arrayMethods(0);
+
+  var SLOPPY_METHOD$1 = sloppyArrayMethod('forEach');
+
+  // `Array.prototype.forEach` method implementation
+  // https://tc39.github.io/ecma262/#sec-array.prototype.foreach
+  var arrayForEach = SLOPPY_METHOD$1 ? function forEach(callbackfn /* , thisArg */) {
+    return internalForEach(this, callbackfn, arguments[1]);
+  } : nativeForEach;
+
+  // `Array.prototype.forEach` method
+  // https://tc39.github.io/ecma262/#sec-array.prototype.foreach
+  _export({ target: 'Array', proto: true, forced: [].forEach != arrayForEach }, { forEach: arrayForEach });
+
+  // `Object.values` method
+  // https://tc39.github.io/ecma262/#sec-object.values
+  _export({ target: 'Object', stat: true }, {
+    values: function values(O) {
+      return objectToArray(O);
+    }
+  });
+
+  // iterable DOM collections
+  // flag - `iterable` interface - 'entries', 'keys', 'values', 'forEach' methods
+  var domIterables = {
+    CSSRuleList: 0,
+    CSSStyleDeclaration: 0,
+    CSSValueList: 0,
+    ClientRectList: 0,
+    DOMRectList: 0,
+    DOMStringList: 0,
+    DOMTokenList: 1,
+    DataTransferItemList: 0,
+    FileList: 0,
+    HTMLAllCollection: 0,
+    HTMLCollection: 0,
+    HTMLFormElement: 0,
+    HTMLSelectElement: 0,
+    MediaList: 0,
+    MimeTypeArray: 0,
+    NamedNodeMap: 0,
+    NodeList: 1,
+    PaintRequestList: 0,
+    Plugin: 0,
+    PluginArray: 0,
+    SVGLengthList: 0,
+    SVGNumberList: 0,
+    SVGPathSegList: 0,
+    SVGPointList: 0,
+    SVGStringList: 0,
+    SVGTransformList: 0,
+    SourceBufferList: 0,
+    StyleSheetList: 0,
+    TextTrackCueList: 0,
+    TextTrackList: 0,
+    TouchList: 0
+  };
+
+  for (var COLLECTION_NAME in domIterables) {
+    var Collection = global$1[COLLECTION_NAME];
+    var CollectionPrototype = Collection && Collection.prototype;
+    // some Chrome versions have non-configurable methods on DOMTokenList
+    if (CollectionPrototype && CollectionPrototype.forEach !== arrayForEach) try {
+      hide(CollectionPrototype, 'forEach', arrayForEach);
+    } catch (e) {
+      CollectionPrototype.forEach = arrayForEach;
+    }
+  }
 
   /**
    * Returns a function that always returns the given value. Note that for
@@ -5279,10 +5385,10 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   });
   var lensPath_1 = lensPath;
 
-  function _templateObject() {
-    var data = _taggedTemplateLiteral(["\n      <div>", "</div>\n    "]);
+  function _templateObject$1() {
+    var data = _taggedTemplateLiteral(["\n      <", "\n        >", "<//\n      >\n    "]);
 
-    _templateObject = function _templateObject() {
+    _templateObject$1 = function _templateObject() {
       return data;
     };
 
@@ -5302,18 +5408,26 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
       return set_1(rLens("loading"), action.value, state);
     }
   };
-  var createReducer = function createReducer(request, actions) {
+  var createReducer = function createReducer(actions) {
     return function (state, action) {
-      return action && actions[action.id] ? actions[action.id].call(request, state, action) : utilities.log(state, "invalid action ".concat(action && action.id));
+      return action && actions[action.id] ? //this is the bound request handler
+      actions[action.id].call(this, state, action) : utilities.log(state, "invalid action ".concat(action && action.id));
     };
   }; //pass in request handler (api.request)
 
   var store$2 = function () {
     var _state = {};
     var _actions = baseActions;
+    var _componentTree = {};
 
-    var request = function request() {
-      return Promise.reject("request handler not set");
+    var _dispatch2 = function _dispatch() {};
+
+    var _request = function _request() {
+      return Promise.reject("global request handler not set");
+    };
+
+    var _reducer = function _reducer(state) {
+      return state;
     };
 
     var storeWrapper = function storeWrapper(props) {
@@ -5325,43 +5439,65 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
           children = _props$children === void 0 ? [] : _props$children,
           _props$initialize = props.initialize,
           _props$requestHandler = props.requestHandler,
-          requestHandler = _props$requestHandler === void 0 ? request : _props$requestHandler,
+          requestHandler = _props$requestHandler === void 0 ? _request : _props$requestHandler,
           id = props.id;
 
       var _children = _slicedToArray(children, 1),
           child = _children[0];
 
-      _actions = Object.assign(_actions, flat(actions, " "));
-      _state = umd(initialState, _state);
+      var cachedComponent = utilities.lens(id, _componentTree);
 
-      var _useReducer$call = useReducer.call(this, createReducer(requestHandler, _actions), _state),
-          _useReducer$call2 = _slicedToArray(_useReducer$call, 2),
-          state = _useReducer$call2[0],
-          dispatch = _useReducer$call2[1]; //instead of calling dispatch({type: 'form submit', data: {}}) it is dispatch('form submit')({data})
+      if (!cachedComponent) {
+        _state = umd(initialState, _state);
+        _actions = Object.assign(_actions, flat(actions, " "));
+        _reducer = createReducer(_actions);
 
+        _dispatch2 = function _dispatch(id, action) {
+          //use the component specific request handler fallback to global
+          var newState = _reducer.call(utilities.type.isFunction(this) ? this : _request, _state, Object.assign(action, {
+            id: id
+          }));
 
-      var ogDispatch = dispatch;
-      dispatch = curry_1(function (id, action) {
-        var promise = ogDispatch.call(request, Object.assign({
-          id: id
-        }, action || {}));
+          var async = utilities.isPromise(newState);
 
-        if (promise instanceof Promise || promise && promise.then && promise.catch) {
-          ogDispatch({
-            id: "loading",
-            value: true
-          });
-          promise.then(function () {
-            ogDispatch({
-              id: "loading",
+          if (async) {
+            _dispatch2("loading", {
+              value: true
+            });
+          }
+
+          (async ? newState : Promise.resolve(newState)).then(function (response) {
+            if (utilities.type.isObject(response)) _state = response;
+
+            if (!action.silent) {
+              /**
+               * at the moment we are managing a component tree that is not unified
+               * there are several root components because it is being used as a library
+               * on top of bb instead of a standalone application. Here each of the root
+               * components is being updated after every action. This could be made more
+               * specific for performance but for now i think this is a more straight-forward
+               * approach.
+               */
+              Object.values(_componentTree).forEach(function (component) {
+                component.setState({});
+              });
+            }
+
+            if (async) _dispatch2("loading", {
               value: false
             });
           });
-        }
-      });
-      return html$1(_templateObject(), child({
-        state: state,
-        dispatch: dispatch
+        };
+
+        _componentTree = set_1(rLens(id), this, _componentTree);
+      } //instead of calling dispatch({type: 'form submit', data: {}}) it is dispatch('form submit')({data})
+      //actions may be nested and will be flattened. space is used as the delimeter
+      //to differentiate from the normal . access with lenses
+
+
+      return html$1(_templateObject$1(), Fragment, child({
+        state: _state,
+        dispatch: curry_1(_dispatch2.bind(requestHandler))
       }));
     };
 
@@ -5369,9 +5505,22 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
       request = handler;
     };
 
+    storeWrapper.dispatch = function () {
+      var _dispatch3;
+
+      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      return (_dispatch3 = _dispatch2).call.apply(_dispatch3, [_request].concat(args));
+    };
+
+    storeWrapper.getState = function () {
+      return _state;
+    };
+
     return storeWrapper;
   }();
-
   store$2.createReducer = createReducer;
   store$2.baseActions = baseActions;
 
@@ -10022,10 +10171,10 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
 
   var preset = unwrapExports(lib$c);
 
-  function _templateObject$1() {
+  function _templateObject$2() {
     var data = _taggedTemplateLiteral(["\n      <", " classes=", " ...", " />\n    "]);
 
-    _templateObject$1 = function _templateObject() {
+    _templateObject$2 = function _templateObject() {
       return data;
     };
 
@@ -10038,40 +10187,65 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     var _sheet$attach = sheet.attach(),
         classes = _sheet$attach.classes;
 
-    var appliedCustomSheet;
     return function (props) {
-      if (!appliedCustomSheet && utilities.type.isObject(props.style)) {
-        sheet.detach();
-        sheet = jss.createStyleSheet(umd(style, props.style));
-        classes = sheet.classes;
-        appliedCustomSheet = true;
+      if (utilities.type.isObject(props.style)) {
+        try {
+          var mergedStyles = umd(style, props.style); //this could probbly be more efficient (only merging once)
+          //but this means that we can render differently styled versions
+          //of a component
+
+          if (JSON.stringify(mergedStyles) !== JSON.stringify(style)) {
+            sheet.detach();
+            style = mergedStyles;
+            sheet = jss.createStyleSheet(style);
+            var attatched = sheet.attach();
+            classes = attatched.classes;
+          }
+        } catch (e) {
+          console.log("error merging styles: ", e);
+        }
       }
 
-      return html$1(_templateObject$1(), WrappedComponent, classes, props);
+      return html$1(_templateObject$2(), WrappedComponent, classes, props);
     };
   });
 
   var withAdapter = curryN_1(2, function () {
-    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var WrappedComponent = arguments.length > 1 ? arguments[1] : undefined;
-    var _options$adapters = options.adapters,
-        adapters = _options$adapters === void 0 ? [] : _options$adapters,
-        _options$id = options.id,
-        id = _options$id === void 0 ? "#meToo" : _options$id;
-    WrappedComponent.adapters = adapters.reduce(function (acc, key) {
-      if (type.isFunction(adapters[key])) acc[key] = adapters[key](options, WrappedComponent);
-      return acc;
-    }, {});
-    id = id || WrappedComponent.id;
+    // let { adapters = [], name = "meToo" } = options;
+    // WrappedComponent.adapters = adapters.reduce((acc, key) => {
+    //   if (type.isFunction(adapters[key]))
+    //     acc[key] = adapters[key](options, WrappedComponent);
+    //   return acc;
+    // }, {});
+    var id = WrappedComponent.properties.id;
 
-    WrappedComponent.render = function () {
+    WrappedComponent.methods.render = function () {
       var props = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      return render(h(WrappedComponent, Object.assign({
-        id: id
-      }, props)), document.getElementById(id + "-container"));
+      return render(h(WrappedComponent, props), document.getElementById(id + "-container"));
     };
 
     return WrappedComponent;
+  });
+
+  function _templateObject$3() {
+    var data = _taggedTemplateLiteral(["\n      <", " validator=", " ...", " />\n    "]);
+
+    _templateObject$3 = function _templateObject() {
+      return data;
+    };
+
+    return data;
+  }
+  var withValidation = curry_1(function (validation, WrappedComponent) {
+    var validator = validate(validation);
+    return function (props) {
+      if (props.validation) {
+        validator = validate(umd(validation, props.validation));
+      }
+
+      return html$1(_templateObject$3(), WrappedComponent, validator, props);
+    };
   });
 
   function _pipe(f, g) {
@@ -10354,8 +10528,72 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   }
   var _isFunction_1 = _isFunction;
 
+  /**
+   * Turns a named method with a specified arity into a function that can be
+   * called directly supplied with arguments and a target object.
+   *
+   * The returned function is curried and accepts `arity + 1` parameters where
+   * the final parameter is the target object.
+   *
+   * @func
+   * @memberOf R
+   * @since v0.1.0
+   * @category Function
+   * @sig Number -> String -> (a -> b -> ... -> n -> Object -> *)
+   * @param {Number} arity Number of arguments the returned function should take
+   *        before the target object.
+   * @param {String} method Name of the method to call.
+   * @return {Function} A new curried function.
+   * @see R.construct
+   * @example
+   *
+   *      const sliceFrom = R.invoker(1, 'slice');
+   *      sliceFrom(6, 'abcdefghijklm'); //=> 'ghijklm'
+   *      const sliceFrom6 = R.invoker(2, 'slice')(6);
+   *      sliceFrom6(8, 'abcdefghijklm'); //=> 'gh'
+   * @symb R.invoker(0, 'method')(o) = o['method']()
+   * @symb R.invoker(1, 'method')(a, o) = o['method'](a)
+   * @symb R.invoker(2, 'method')(a, b, o) = o['method'](a, b)
+   */
+
+
+  var invoker = /*#__PURE__*/_curry2_1(function invoker(arity, method) {
+    return curryN_1(arity + 1, function () {
+      var target = arguments[arity];
+      if (target != null && _isFunction_1(target[method])) {
+        return target[method].apply(target, Array.prototype.slice.call(arguments, 0, arity));
+      }
+      throw new TypeError(toString_1(target) + ' does not have a method named "' + method + '"');
+    });
+  });
+  var invoker_1 = invoker;
+
+  /**
+   * Returns a string made by inserting the `separator` between each element and
+   * concatenating all the elements into a single string.
+   *
+   * @func
+   * @memberOf R
+   * @since v0.1.0
+   * @category List
+   * @sig String -> [a] -> String
+   * @param {Number|String} separator The string used to separate the elements.
+   * @param {Array} xs The elements to join into a string.
+   * @return {String} str The string made by concatenating `xs` with `separator`.
+   * @see R.split
+   * @example
+   *
+   *      const spacer = R.join(' ');
+   *      spacer(['a', 2, 3.4]);   //=> 'a 2 3.4'
+   *      R.join('|', [1, 2, 3]);    //=> '1|2|3'
+   */
+
+
+  var join = /*#__PURE__*/invoker_1(1, 'join');
+  var join_1 = join;
+
   function _templateObject3() {
-    var data = _taggedTemplateLiteral(["\n          <form\n            onsubmit=", "\n            data-action=\"submit\"\n            class=", "\n            id=\"", "-form\"\n          >\n            <div className=\"formfield\">\n              <label for=\"recipient\" className=\"required\">Recipient</label>\n              <input\n                name=\"recipient\"\n                type=\"email\"\n                class=", "\n                oninput=", "\n                value=", "\n                required\n              />\n              <span validation=\"recipient\"\n                >", "</span\n              >\n            </div>\n            <div className=\"formfield\">\n              <label for=\"message\" className=\"required\">Message</label>\n              <input\n                name=\"message\"\n                type=\"text\"\n                class=", "\n                oninput=", "\n                value=", "\n                required\n              />\n              <span validation=\"message\">", "</span>\n            </div>\n            <button type=\"submit\" className=", ">Send</button>\n          </form>\n        "]);
+    var data = _taggedTemplateLiteral(["\n          <form\n            onsubmit=", "\n            data-action=\"submit\"\n            class=", "\n            id=\"", "\"\n            novalidate=", "\n          >\n            <div\n              class=\"g-recaptcha\"\n              data-sitekey=", "\n              data-callback=\"captchaSuccess\"\n              data-error-callback=\"captchaError\"\n              data-expired-callback=\"captchaError\"\n              data-size=\"invisible\"\n              ref=", "\n            ></div>\n            <div class=", ">\n              <label for=\"recipient\" className=\"required\">Recipient</label>\n              <input\n                name=\"recipient\"\n                type=\"email\"\n                class=", "\n                oninput=", "\n                value=", "\n                placeholder=\"one@a.time\"\n                required\n              />\n              <span class=", " for=\"recipient\"\n                >", "</span\n              >\n            </div>\n            <div class=", ">\n              <label for=\"message\" className=\"required\">Message</label>\n              <input\n                name=\"message\"\n                type=\"text\"\n                class=", "\n                oninput=", "\n                value=", "\n                placeholder=\"I like your sleeves\"\n                required\n              />\n              <span class=", " for=\"message\"\n                >", "</span\n              >\n            </div>\n            <button type=\"submit\" className=", ">Send</button>\n          </form>\n        "]);
 
     _templateObject3 = function _templateObject3() {
       return data;
@@ -10374,10 +10612,10 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     return data;
   }
 
-  function _templateObject$2() {
-    var data = _taggedTemplateLiteral(["\n    <", "\n      initialState=", "\n      actions=", "\n      requestHandler=", "\n      >", "<//\n    >\n  "]);
+  function _templateObject$4() {
+    var data = _taggedTemplateLiteral(["\n    <", "\n      initialState=", "\n      actions=", "\n      requestHandler=", "\n      id=", "\n      >", "<//\n    >\n  "]);
 
-    _templateObject$2 = function _templateObject() {
+    _templateObject$4 = function _templateObject() {
       return data;
     };
 
@@ -10401,11 +10639,11 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   //     <form data-action="submit" id="${id}-form">
   //       <div class="formfield">
   //         <label for="recipient" class="required">
-  //         <input name="recipient" type="email" required>
+  //         <input id="recipient" type="email" required>
   //       </div>
   //       <div class="formfield">
   //         <label for="message" class="required">
-  //         <input name="message" type="email" required>
+  //         <input id="message" type="email" required>
   //       </div>
   //       <button type="submit">
   //     </form>
@@ -10414,25 +10652,29 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
 
   var actions = {
     sendEmail: function sendEmail(state, action) {
-      return this("post", "/bronto/sendMessage", {
-        recipient: utilities.lens("recipient", state),
-        message: utilities.lens("message", state),
-        action: action
+      var _this = this;
+
+      return action.captchaPromise.then(function (token) {
+        debugger;
+        return _this("post", "/bronto/sendMessage", {
+          recipient: utilities.lens("recipient", state),
+          message: utilities.lens("message", state),
+          "g-recaptcha-response": token,
+          action: action
+        });
       }).then(function (response) {
         console.log(response);
         action.triggerMessage({
-          value: {
-            type: "success",
-            text: "Great Success!"
-          }
+          type: "success",
+          value: "Great Success!",
+          autoFade: true
         });
       }).catch(function (err) {
         console.log(err);
         action.triggerMessage({
-          value: {
-            type: "error",
-            text: "User Error!"
-          }
+          type: "error",
+          value: "User Error!",
+          autoFade: true
         });
       });
     }
@@ -10443,6 +10685,11 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   };
   initialState.validation = clone_1(initialState);
   var style = {
+    form: {
+      "&:after": {
+        clear: "both"
+      }
+    },
     submit: {
       background: "green",
       "&:hover": {
@@ -10451,25 +10698,37 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     },
     loading: {
       opacity: "0.3"
+    },
+    input: {
+      "margin-bottom": "0px"
+    },
+    formfield: {
+      "margin-bottom": "9px"
+    },
+    validation: {
+      color: "crimson"
     }
   };
   var validation = {
     recipient: "email",
     message: "required"
   };
-  //that it wants to call. assume every other dispatch is specific
-  //to this instance
-  //withAdapter needs to be run last since it adds methods to the view
-
-  var view = compose_1(withAdapter({
-    id: id$2
-  }), withStyle(style))(function (props) {
+  var component = function component(props) {
     var classes = props.classes;
-    var id = props.id;
-    var validator = validate(validation); //vm methods
+    var validator = props.validator || utilities.noop;
+    var captchaPromise = new Promise(function (resolve, reject) {
+      window.captchaSuccess = function (token) {
+        resolve(token);
+      };
+
+      window.captchaError = function (token) {
+        reject(token);
+      };
+    }); //vm methods
 
     var submit = curry_1(function (dispatch, state, event) {
       event.preventDefault();
+      if (window.grecaptcha) window.grecaptcha.execute();
       var invalid = validator(state);
 
       if (invalid) {
@@ -10477,11 +10736,12 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
           path: "validation",
           value: invalid
         });
-      } //if the message action doesn't exist this will just do nothing
+      } //if the triggerMessage action doesn't exist this will just do nothing
 
 
-      if (validator) dispatch("sendEmail", {
-        triggerMessage: dispatch("triggerMessage")
+      dispatch("sendEmail", {
+        triggerMessage: dispatch("triggerMessage"),
+        captchaPromise: captchaPromise
       });
     });
     var handleInput = curry_1(function (dispatch, path, event) {
@@ -10494,7 +10754,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
       submit: submit,
       handleInput: handleInput
     });
-    return html$1(_templateObject$2(), store$2, initialState, actions, props.requestHandler, function (_ref) {
+    return html$1(_templateObject$4(), store$2, initialState, actions, props.requestHandler, id$2, function (_ref) {
       var dispatch = _ref.dispatch,
           state = _ref.state;
       var vm = bindVm(dispatch);
@@ -10508,16 +10768,22 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
         return html$1(_templateObject2(), props.customView());
       }
 
-      return html$1(_templateObject3(), vm.submit(state), state.loading ? classes.loading : "", id, classes.input, vm.handleInput("recipient"), prop("recipient"), prop("validation.recipient"), classes.input, vm.handleInput("message"), prop("message"), prop("validation.message"), classes.submit);
+      return html$1(_templateObject3(), vm.submit(state), join_1(" ", [classes.form, state.loading ? classes.loading : ""]), id$2, !!props.novalidate, props.recaptchaKey, function (element) {
+        if (element && window.grecaptcha) {
+          try {
+            window.grecaptcha.render(element);
+          } catch (e) {}
+        }
+      }, join_1(" ", [classes.formfield, "formfield"]), classes.input, vm.handleInput("recipient"), prop("recipient"), classes.validation, prop("validation.recipient"), join_1(" ", [classes.formfield, "formfield"]), classes.input, vm.handleInput("message"), prop("message"), classes.validation, prop("validation.message"), classes.submit);
     });
-  });
-  var emailForm = {
-    view: view,
-    actions: actions,
+  };
+  component.properties = {
     id: id$2,
+    actions: actions,
     style: style,
     validation: validation
   };
+  var emailForm = composeWrappers(withAdapter({}), withValidation(validation), withStyle(style))(component);
 
   /**
    * Creates a new object by recursively evolving a shallow copy of `object`,
@@ -10646,8 +10912,229 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   });
   var concat_1 = concat;
 
+  /**
+   * Returns a partial copy of an object omitting the keys specified.
+   *
+   * @func
+   * @memberOf R
+   * @since v0.1.0
+   * @category Object
+   * @sig [String] -> {String: *} -> {String: *}
+   * @param {Array} names an array of String property names to omit from the new object
+   * @param {Object} obj The object to copy from
+   * @return {Object} A new object with properties from `names` not on it.
+   * @see R.pick
+   * @example
+   *
+   *      R.omit(['a', 'd'], {a: 1, b: 2, c: 3, d: 4}); //=> {b: 2, c: 3}
+   */
+
+
+  var omit = /*#__PURE__*/_curry2_1(function omit(names, obj) {
+    var result = {};
+    var index = {};
+    var idx = 0;
+    var len = names.length;
+
+    while (idx < len) {
+      index[names[idx]] = 1;
+      idx += 1;
+    }
+
+    for (var prop in obj) {
+      if (!index.hasOwnProperty(prop)) {
+        result[prop] = obj[prop];
+      }
+    }
+    return result;
+  });
+  var omit_1 = omit;
+
+  var XReduceBy = /*#__PURE__*/function () {
+
+    function XReduceBy(valueFn, valueAcc, keyFn, xf) {
+      this.valueFn = valueFn;
+      this.valueAcc = valueAcc;
+      this.keyFn = keyFn;
+      this.xf = xf;
+      this.inputs = {};
+    }
+    XReduceBy.prototype['@@transducer/init'] = _xfBase.init;
+    XReduceBy.prototype['@@transducer/result'] = function (result) {
+      var key;
+      for (key in this.inputs) {
+        if (_has_1(key, this.inputs)) {
+          result = this.xf['@@transducer/step'](result, this.inputs[key]);
+          if (result['@@transducer/reduced']) {
+            result = result['@@transducer/value'];
+            break;
+          }
+        }
+      }
+      this.inputs = null;
+      return this.xf['@@transducer/result'](result);
+    };
+    XReduceBy.prototype['@@transducer/step'] = function (result, input) {
+      var key = this.keyFn(input);
+      this.inputs[key] = this.inputs[key] || [key, this.valueAcc];
+      this.inputs[key][1] = this.valueFn(this.inputs[key][1], input);
+      return result;
+    };
+
+    return XReduceBy;
+  }();
+
+  var _xreduceBy = /*#__PURE__*/_curryN_1(4, [], function _xreduceBy(valueFn, valueAcc, keyFn, xf) {
+    return new XReduceBy(valueFn, valueAcc, keyFn, xf);
+  });
+  var _xreduceBy_1 = _xreduceBy;
+
+  /**
+   * Groups the elements of the list according to the result of calling
+   * the String-returning function `keyFn` on each element and reduces the elements
+   * of each group to a single value via the reducer function `valueFn`.
+   *
+   * This function is basically a more general [`groupBy`](#groupBy) function.
+   *
+   * Acts as a transducer if a transformer is given in list position.
+   *
+   * @func
+   * @memberOf R
+   * @since v0.20.0
+   * @category List
+   * @sig ((a, b) -> a) -> a -> (b -> String) -> [b] -> {String: a}
+   * @param {Function} valueFn The function that reduces the elements of each group to a single
+   *        value. Receives two values, accumulator for a particular group and the current element.
+   * @param {*} acc The (initial) accumulator value for each group.
+   * @param {Function} keyFn The function that maps the list's element into a key.
+   * @param {Array} list The array to group.
+   * @return {Object} An object with the output of `keyFn` for keys, mapped to the output of
+   *         `valueFn` for elements which produced that key when passed to `keyFn`.
+   * @see R.groupBy, R.reduce
+   * @example
+   *
+   *      const groupNames = (acc, {name}) => acc.concat(name)
+   *      const toGrade = ({score}) =>
+   *        score < 65 ? 'F' :
+   *        score < 70 ? 'D' :
+   *        score < 80 ? 'C' :
+   *        score < 90 ? 'B' : 'A'
+   *
+   *      var students = [
+   *        {name: 'Abby', score: 83},
+   *        {name: 'Bart', score: 62},
+   *        {name: 'Curt', score: 88},
+   *        {name: 'Dora', score: 92},
+   *      ]
+   *
+   *      reduceBy(groupNames, [], toGrade, students)
+   *      //=> {"A": ["Dora"], "B": ["Abby", "Curt"], "F": ["Bart"]}
+   */
+
+
+  var reduceBy = /*#__PURE__*/_curryN_1(4, [], /*#__PURE__*/_dispatchable_1([], _xreduceBy_1, function reduceBy(valueFn, valueAcc, keyFn, list) {
+    return _reduce_1(function (acc, elt) {
+      var key = keyFn(elt);
+      acc[key] = valueFn(_has_1(key, acc) ? acc[key] : valueAcc, elt);
+      return acc;
+    }, {}, list);
+  }));
+  var reduceBy_1 = reduceBy;
+
+  /**
+   * Splits a list into sub-lists stored in an object, based on the result of
+   * calling a String-returning function on each element, and grouping the
+   * results according to values returned.
+   *
+   * Dispatches to the `groupBy` method of the second argument, if present.
+   *
+   * Acts as a transducer if a transformer is given in list position.
+   *
+   * @func
+   * @memberOf R
+   * @since v0.1.0
+   * @category List
+   * @sig (a -> String) -> [a] -> {String: [a]}
+   * @param {Function} fn Function :: a -> String
+   * @param {Array} list The array to group
+   * @return {Object} An object with the output of `fn` for keys, mapped to arrays of elements
+   *         that produced that key when passed to `fn`.
+   * @see R.reduceBy, R.transduce
+   * @example
+   *
+   *      const byGrade = R.groupBy(function(student) {
+   *        const score = student.score;
+   *        return score < 65 ? 'F' :
+   *               score < 70 ? 'D' :
+   *               score < 80 ? 'C' :
+   *               score < 90 ? 'B' : 'A';
+   *      });
+   *      const students = [{name: 'Abby', score: 84},
+   *                      {name: 'Eddy', score: 58},
+   *                      // ...
+   *                      {name: 'Jack', score: 69}];
+   *      byGrade(students);
+   *      // {
+   *      //   'A': [{name: 'Dianne', score: 99}],
+   *      //   'B': [{name: 'Abby', score: 84}]
+   *      //   // ...,
+   *      //   'F': [{name: 'Eddy', score: 58}]
+   *      // }
+   */
+
+
+  var groupBy = /*#__PURE__*/_curry2_1( /*#__PURE__*/_checkForMethod_1('groupBy', /*#__PURE__*/reduceBy_1(function (acc, item) {
+    if (acc == null) {
+      acc = [];
+    }
+    acc.push(item);
+    return acc;
+  }, null)));
+  var groupBy_1 = groupBy;
+
+  /**
+   * An Object-specific version of [`map`](#map). The function is applied to three
+   * arguments: *(value, key, obj)*. If only the value is significant, use
+   * [`map`](#map) instead.
+   *
+   * @func
+   * @memberOf R
+   * @since v0.9.0
+   * @category Object
+   * @sig ((*, String, Object) -> *) -> Object -> Object
+   * @param {Function} fn
+   * @param {Object} obj
+   * @return {Object}
+   * @see R.map
+   * @example
+   *
+   *      const xyz = { x: 1, y: 2, z: 3 };
+   *      const prependKeyAndDouble = (num, key, obj) => key + (num * 2);
+   *
+   *      R.mapObjIndexed(prependKeyAndDouble, xyz); //=> { x: 'x2', y: 'y4', z: 'z6' }
+   */
+
+
+  var mapObjIndexed = /*#__PURE__*/_curry2_1(function mapObjIndexed(fn, obj) {
+    return _reduce_1(function (acc, key) {
+      acc[key] = fn(obj[key], key, obj);
+      return acc;
+    }, {}, keys_1(obj));
+  });
+  var mapObjIndexed_1 = mapObjIndexed;
+
+  function _templateObject4() {
+    var data = _taggedTemplateLiteral(["\n                            <li\n                              key=", "\n                              message-id=", "\n                              ref=", "\n                              class=", "\n                            >\n                              ", "\n                            </li>\n                          "]);
+
+    _templateObject4 = function _templateObject4() {
+      return data;
+    };
+
+    return data;
+  }
+
   function _templateObject3$1() {
-    var data = _taggedTemplateLiteral(["\n                    <ul class=", ">\n                      <li class=", ">", "</li>\n                    </ul>\n                  "]);
+    var data = _taggedTemplateLiteral(["\n                  <ul key=", " class=", ">\n                    ", "\n                  </ul>\n                "]);
 
     _templateObject3$1 = function _templateObject3() {
       return data;
@@ -10666,10 +11153,10 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     return data;
   }
 
-  function _templateObject$3() {
-    var data = _taggedTemplateLiteral(["\n    <", " initialState=", " actions=", "\n      >", "<//\n    >\n  "]);
+  function _templateObject$5() {
+    var data = _taggedTemplateLiteral(["\n    <", " initialState=", " actions=", " id=", "\n      >", "<//\n    >\n  "]);
 
-    _templateObject$3 = function _templateObject() {
+    _templateObject$5 = function _templateObject() {
       return data;
     };
 
@@ -10678,7 +11165,10 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   var id$3 = "message-bar";
   var style$1 = {
     container: {
-      "margin-bottom": "10px"
+      "margin-bottom": "10px",
+      "& ul": {
+        "list-style": "none"
+      }
     },
     success: {
       background: "green"
@@ -10696,30 +11186,64 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   var actions$1 = {
     triggerMessage: function triggerMessage(state, action) {
       return evolve_1({
-        messages: flip_1(concat_1)([action.value])
+        messages: flip_1(concat_1)([Object.assign(omit_1("id", action), {
+          messageId: new Date().getTime()
+        })])
       }, state);
     },
     clear: evolve_1({
       messages: empty_1
-    })
+    }),
+    remove: function remove(state, action) {
+      return evolve_1({
+        messages: filter_1(function (message) {
+          return message.messageId != action.messageId;
+        })
+      }, state);
+    }
   };
-  var view$1 = compose_1(withAdapter({
-    id: id$3
-  }), withStyle(style$1))(function (props) {
-    return html$1(_templateObject$3(), store$2, initialState$1, actions$1, function (_ref) {
+  var component$1 = function component(props) {
+    //it would be better to not have to manually maintain the id path
+    //it might be possible to detect it in the store from this.parentcomponent etc
+    var classes = props.classes;
+    var remove = curry_1(function (dispatch, messageId) {
+      dispatch("remove", {
+        messageId: messageId
+      });
+    });
+    var bindVm = createVm({
+      remove: remove
+    });
+    return html$1(_templateObject$5(), store$2, initialState$1, actions$1, id$3, function (_ref) {
       var dispatch = _ref.dispatch,
           state = _ref.state;
-      return html$1(_templateObject2$1(), id$3, props.classes.message, state.messages.length ? state.messages.map(function (message) {
-        return html$1(_templateObject3$1(), props.classes[message.type] || "", props.classes.message, message.text);
-      }) : null);
+      var vm = bindVm(dispatch);
+      return html$1(_templateObject2$1(), id$3, classes.container, compose_1(Object.values, mapObjIndexed_1(function (messageGroup, type) {
+        return html$1(_templateObject3$1(), type, classes[type] || "", messageGroup.length ? messageGroup.map(function (message, dex) {
+          return html$1(_templateObject4(), dex, message.messageId, message.autoFade ? function (ref) {
+            //it would be better to use velocity here imo but that would increase the build size
+            //and is not worth it for one animation here.
+            if (ref) {
+              setTimeout(function () {
+                $$1(ref).fadeOut(3000, utilities.once(function () {
+                  vm.remove($$1(ref).attr("message-id"));
+                }));
+              }, 4000);
+            }
+          } : function () {}, classes.message, message.value);
+        }) : null);
+      }), groupBy_1(function (message) {
+        return message.type;
+      }))(state.messages));
     });
-  });
-  var message = {
-    view: view$1,
+  };
+  component$1.properties = {
     actions: actions$1,
     style: style$1,
     id: id$3
   };
+  component$1.methods = {};
+  var message = composeWrappers(withAdapter({}), withStyle(style$1))(component$1);
 
   var components = {
     emailForm: emailForm,
@@ -10897,42 +11421,6 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     return { value: point, done: false };
   });
 
-  // iterable DOM collections
-  // flag - `iterable` interface - 'entries', 'keys', 'values', 'forEach' methods
-  var domIterables = {
-    CSSRuleList: 0,
-    CSSStyleDeclaration: 0,
-    CSSValueList: 0,
-    ClientRectList: 0,
-    DOMRectList: 0,
-    DOMStringList: 0,
-    DOMTokenList: 1,
-    DataTransferItemList: 0,
-    FileList: 0,
-    HTMLAllCollection: 0,
-    HTMLCollection: 0,
-    HTMLFormElement: 0,
-    HTMLSelectElement: 0,
-    MediaList: 0,
-    MimeTypeArray: 0,
-    NamedNodeMap: 0,
-    NodeList: 1,
-    PaintRequestList: 0,
-    Plugin: 0,
-    PluginArray: 0,
-    SVGLengthList: 0,
-    SVGNumberList: 0,
-    SVGPathSegList: 0,
-    SVGPointList: 0,
-    SVGStringList: 0,
-    SVGTransformList: 0,
-    SourceBufferList: 0,
-    StyleSheetList: 0,
-    TextTrackCueList: 0,
-    TextTrackList: 0,
-    TouchList: 0
-  };
-
   var UNSCOPABLES = wellKnownSymbol('unscopables');
 
 
@@ -11000,23 +11488,23 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   var TO_STRING_TAG$3 = wellKnownSymbol('toStringTag');
   var ArrayValues = es_array_iterator.values;
 
-  for (var COLLECTION_NAME in domIterables) {
-    var Collection = global$1[COLLECTION_NAME];
-    var CollectionPrototype = Collection && Collection.prototype;
-    if (CollectionPrototype) {
+  for (var COLLECTION_NAME$1 in domIterables) {
+    var Collection$1 = global$1[COLLECTION_NAME$1];
+    var CollectionPrototype$1 = Collection$1 && Collection$1.prototype;
+    if (CollectionPrototype$1) {
       // some Chrome versions have non-configurable methods on DOMTokenList
-      if (CollectionPrototype[ITERATOR$5] !== ArrayValues) try {
-        hide(CollectionPrototype, ITERATOR$5, ArrayValues);
+      if (CollectionPrototype$1[ITERATOR$5] !== ArrayValues) try {
+        hide(CollectionPrototype$1, ITERATOR$5, ArrayValues);
       } catch (e) {
-        CollectionPrototype[ITERATOR$5] = ArrayValues;
+        CollectionPrototype$1[ITERATOR$5] = ArrayValues;
       }
-      if (!CollectionPrototype[TO_STRING_TAG$3]) hide(CollectionPrototype, TO_STRING_TAG$3, COLLECTION_NAME);
-      if (domIterables[COLLECTION_NAME]) for (var METHOD_NAME in es_array_iterator) {
+      if (!CollectionPrototype$1[TO_STRING_TAG$3]) hide(CollectionPrototype$1, TO_STRING_TAG$3, COLLECTION_NAME$1);
+      if (domIterables[COLLECTION_NAME$1]) for (var METHOD_NAME in es_array_iterator) {
         // some Chrome versions have non-configurable methods on DOMTokenList
-        if (CollectionPrototype[METHOD_NAME] !== es_array_iterator[METHOD_NAME]) try {
-          hide(CollectionPrototype, METHOD_NAME, es_array_iterator[METHOD_NAME]);
+        if (CollectionPrototype$1[METHOD_NAME] !== es_array_iterator[METHOD_NAME]) try {
+          hide(CollectionPrototype$1, METHOD_NAME, es_array_iterator[METHOD_NAME]);
         } catch (e) {
-          CollectionPrototype[METHOD_NAME] = es_array_iterator[METHOD_NAME];
+          CollectionPrototype$1[METHOD_NAME] = es_array_iterator[METHOD_NAME];
         }
       }
     }

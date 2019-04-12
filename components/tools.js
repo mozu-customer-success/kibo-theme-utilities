@@ -40,7 +40,7 @@ export const validations = {
       let stringValidator = stringValidations[validator];
       if (!stringValidator) return null;
       let result = stringValidator(value);
-      return (result && { [path]: result }) || null;
+      return result || null;
     };
   })()
 };
@@ -58,42 +58,61 @@ export let validate = curry((definition, state) => {
 
 //this should be re-written as a compose function that allows you to add functionality
 //in wrappers that get merged together instead of lost in the closure
-export let extendComponent = (newMethods, component, wrappedComponent) => {
-  let methods = Object.entries(component).reduce((acc, [key, method]) => {
-    if (method && method.isExtension) acc[key] = method;
-    return acc;
-  });
-  for (let [key, value] of Object.entries(Object.assign(methods, newMethods))) {
-    wrappedComponent[key] = value;
-    wrappedComponent[key].isExtension = true;
-  }
-
-  return wrappedComponent;
+export let composeWrappers = (...wrappers) => component => {
+  component.properties = component.properties || {};
+  component.methods = component.methods || {};
+  return wrappers.reverse().reduce((comp, wrap) => {
+    let props = comp.properties;
+    let methods = comp.methods;
+    comp = wrap(comp);
+    comp.properties = Object.assign(props, comp.properties || {});
+    comp.methods = Object.assign(methods, comp.methods || {});
+    return comp;
+  }, component);
 };
 
-export let useReducer = (() => {
-  let _state = {};
-  return function(reducer, initialState = {}, initialAction) {
-    _state = deepmerge(initialState, _state);
-    reducer = reducer || (() => _state);
-    return [
-      _state,
-      action => {
-        let newState = reducer(_state, action);
-        if (
-          newState instanceof Promise ||
-          (newState && newState.then && newState.catch)
-        ) {
-          return newState.then(response => {
-            _state = response;
-            this.setState({});
-          });
-        } else _state = newState;
-        this.setState({});
-      }
-    ];
-  };
-})();
+// export let createReducer = (request, actions) => (state, action) =>
+//   action && actions[action.id]
+//     ? actions[action.id].call(request, state, action)
+//     : util.log(state, `invalid action ${action && action.id}`);
+
+// export let useReducer = (() => {
+//   let _actions = {}
+//   let reducer = x => x
+//   let dispatch = function(action) {
+//     let newState = reducer(_state, action);
+//     if (util.isPromise(newState)) {
+//       return newState.then(response => {
+//         _state = response;
+//         if (this.setState && !action.silent) this.setState({});
+//       });
+//     }
+//     _state = newState;
+//     if (this.setState && !action.silent) this.setState({});
+//   };
+//   let create = function(
+//     actions = {},
+//     initialState = {},
+//     initialAction
+//   ) {
+//     //this is root node of component
+//     _actions = Object.assign(_actions, flatten(actions, " "));
+
+//     if (initialAction) {
+//       dispatch.call(
+//         this,
+//         reducer,
+//         Object.assign(initialAction, { silent: true })
+//       );
+//     }
+
+//     return [_state, dispatch.bind(this, reducer)];
+//   };
+//   //global dispatch
+//   reduce.getState = () => _state;
+//   reduce.
+//   return create;
+// })();
 
 export let createVm = viewActions => dispatch =>
   map(handler => handler(dispatch), viewActions);
@@ -101,5 +120,6 @@ export let createVm = viewActions => dispatch =>
 export default {
   html,
   preact,
-  validate
+  validate,
+  composeWrappers
 };

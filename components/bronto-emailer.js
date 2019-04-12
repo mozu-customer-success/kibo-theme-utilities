@@ -1,8 +1,9 @@
-import { html, createVm, validate } from "components/tools";
+import { html, createVm, validate, composeWrappers } from "components/tools";
 import util from "./utilities";
 import store from "components/wrappers/store";
 import withStyle from "components/wrappers/style";
 import withAdapter from "components/wrappers/adapter";
+import withValidation from "components/wrappers/validation";
 import compose from "ramda/src/compose";
 import propOr from "ramda/src/propOr";
 import curry from "ramda/src/curry";
@@ -31,11 +32,11 @@ export let id = "bronto-emailer";
 //     <form data-action="submit" id="${id}-form">
 //       <div class="formfield">
 //         <label for="recipient" class="required">
-//         <input name="recipient" type="email" required>
+//         <input id="recipient" type="email" required>
 //       </div>
 //       <div class="formfield">
 //         <label for="message" class="required">
-//         <input name="message" type="email" required>
+//         <input id="message" type="email" required>
 //       </div>
 //       <button type="submit">
 //     </form>
@@ -44,27 +45,30 @@ export let id = "bronto-emailer";
 
 export let actions = {
   sendEmail: function(state, action) {
-    return this("post", "/bronto/sendMessage", {
-      recipient: util.lens("recipient", state),
-      message: util.lens("message", state),
-      action
-    })
+    return action.captchaPromise
+      .then(token => {
+        debugger;
+        return this("post", "/bronto/sendMessage", {
+          recipient: util.lens("recipient", state),
+          message: util.lens("message", state),
+          "g-recaptcha-response": token,
+          action
+        });
+      })
       .then(response => {
         console.log(response);
         action.triggerMessage({
-          value: {
-            type: "success",
-            text: "Great Success!"
-          }
+          type: "success",
+          value: "Great Success!",
+          autoFade: true
         });
       })
       .catch(err => {
         console.log(err);
         action.triggerMessage({
-          value: {
-            type: "error",
-            text: "User Error!"
-          }
+          type: "error",
+          value: "User Error!",
+          autoFade: true
         });
       });
   }
@@ -78,6 +82,11 @@ export let initialState = {
 initialState.validation = clone(initialState);
 
 export let style = {
+  form: {
+    "&:after": {
+      clear: "both"
+    }
+  },
   submit: {
     background: "green",
     "&:hover": {
@@ -86,6 +95,15 @@ export let style = {
   },
   loading: {
     opacity: "0.3"
+  },
+  input: {
+    "margin-bottom": "0px"
+  },
+  formfield: {
+    "margin-bottom": "9px"
+  },
+  validation: {
+    color: "crimson"
   }
 };
 
@@ -103,23 +121,23 @@ export let test = {
   ]
 };
 
-//view should use store wrapper and indicate the global actions
-//that it wants to call. assume every other dispatch is specific
-//to this instance
-//withAdapter needs to be run last since it adds methods to the view
-let view = compose(
-  withAdapter({
-    id
-  }),
-  withStyle(style)
-)(props => {
+export let component = props => {
   let { classes } = props;
-  let id = props.id;
-  let validator = validate(validation);
+  let validator = props.validator || util.noop;
+
+  let captchaPromise = new Promise((resolve, reject) => {
+    window.captchaSuccess = token => {
+      resolve(token);
+    };
+    window.captchaError = token => {
+      reject(token);
+    };
+  });
 
   //vm methods
   let submit = curry((dispatch, state, event) => {
     event.preventDefault();
+    if (window.grecaptcha) window.grecaptcha.execute();
     let invalid = validator(state);
     if (invalid) {
       return dispatch("mutate", {
@@ -127,11 +145,11 @@ let view = compose(
         value: invalid
       });
     }
-    //if the message action doesn't exist this will just do nothing
-    if (validator)
-      dispatch("sendEmail", {
-        triggerMessage: dispatch("triggerMessage")
-      });
+    //if the triggerMessage action doesn't exist this will just do nothing
+    dispatch("sendEmail", {
+      triggerMessage: dispatch("triggerMessage"),
+      captchaPromise
+    });
   });
   let handleInput = curry((dispatch, path, event) => {
     dispatch("mutate", {
@@ -150,6 +168,7 @@ let view = compose(
       initialState=${initialState}
       actions=${actions}
       requestHandler=${props.requestHandler}
+      id=${id}
       >${({ dispatch, state }) => {
         let vm = bindVm(dispatch);
         let prop = flip(util.lens)(state);
@@ -166,10 +185,29 @@ let view = compose(
           <form
             onsubmit=${vm.submit(state)}
             data-action="submit"
-            class=${state.loading ? classes.loading : ""}
-            id="${id}-form"
+            class=${join(" ", [
+              classes.form,
+              state.loading ? classes.loading : ""
+            ])}
+            id="${id}"
+            novalidate=${!!props.novalidate}
           >
-            <div className="formfield">
+            <div
+              class="g-recaptcha"
+              data-sitekey=${props.recaptchaKey}
+              data-callback="captchaSuccess"
+              data-error-callback="captchaError"
+              data-expired-callback="captchaError"
+              data-size="invisible"
+              ref=${element => {
+                if (element && window.grecaptcha) {
+                  try {
+                    window.grecaptcha.render(element);
+                  } catch (e) {}
+                }
+              }}
+            ></div>
+            <div class=${join(" ", [classes.formfield, "formfield"])}>
               <label for="recipient" className="required">Recipient</label>
               <input
                 name="recipient"
@@ -177,13 +215,14 @@ let view = compose(
                 class=${classes.input}
                 oninput=${vm.handleInput("recipient")}
                 value=${prop("recipient")}
+                placeholder="one@a.time"
                 required
               />
-              <span validation="recipient"
+              <span class=${classes.validation} for="recipient"
                 >${prop("validation.recipient")}</span
               >
             </div>
-            <div className="formfield">
+            <div class=${join(" ", [classes.formfield, "formfield"])}>
               <label for="message" className="required">Message</label>
               <input
                 name="message"
@@ -191,9 +230,12 @@ let view = compose(
                 class=${classes.input}
                 oninput=${vm.handleInput("message")}
                 value=${prop("message")}
+                placeholder="I like your sleeves"
                 required
               />
-              <span validation="message">${prop("validation.message")}</span>
+              <span class=${classes.validation} for="message"
+                >${prop("validation.message")}</span
+              >
             </div>
             <button type="submit" className=${classes.submit}>Send</button>
           </form>
@@ -201,12 +243,17 @@ let view = compose(
       }}<//
     >
   `;
-});
+};
 
-export default {
-  view,
-  actions,
+component.properties = {
   id,
+  actions,
   style,
   validation
 };
+
+export default composeWrappers(
+  withAdapter({}),
+  withValidation(validation),
+  withStyle(style)
+)(component);
