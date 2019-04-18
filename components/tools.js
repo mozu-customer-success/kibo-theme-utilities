@@ -71,51 +71,9 @@ export let composeWrappers = (...wrappers) => component => {
   }, component);
 };
 
-// export let createReducer = (request, actions) => (state, action) =>
-//   action && actions[action.id]
-//     ? actions[action.id].call(request, state, action)
-//     : util.log(state, `invalid action ${action && action.id}`);
-
-// export let useReducer = (() => {
-//   let _actions = {}
-//   let reducer = x => x
-//   let dispatch = function(action) {
-//     let newState = reducer(_state, action);
-//     if (util.isPromise(newState)) {
-//       return newState.then(response => {
-//         _state = response;
-//         if (this.setState && !action.silent) this.setState({});
-//       });
-//     }
-//     _state = newState;
-//     if (this.setState && !action.silent) this.setState({});
-//   };
-//   let create = function(
-//     actions = {},
-//     initialState = {},
-//     initialAction
-//   ) {
-//     //this is root node of component
-//     _actions = Object.assign(_actions, flatten(actions, " "));
-
-//     if (initialAction) {
-//       dispatch.call(
-//         this,
-//         reducer,
-//         Object.assign(initialAction, { silent: true })
-//       );
-//     }
-
-//     return [_state, dispatch.bind(this, reducer)];
-//   };
-//   //global dispatch
-//   reduce.getState = () => _state;
-//   reduce.
-//   return create;
-// })();
-
-export let createVm = viewActions => dispatch =>
-  map(handler => handler(dispatch), viewActions);
+export let createVm = curry((viewActions, dispatch, state) =>
+  map(handler => handler.bind(null, dispatch, state), viewActions)
+);
 
 export default {
   html,

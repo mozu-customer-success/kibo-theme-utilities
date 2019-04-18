@@ -6,6 +6,7 @@ import flatten from "flat";
 import set from "ramda/src/set";
 import lensPath from "ramda/src/lensPath";
 import head from "ramda/src/head";
+import map from "ramda/src/map";
 import { html, Fragment } from "components/tools";
 import curry from "ramda/src/curry";
 
@@ -23,7 +24,7 @@ export let baseActions = {
 };
 
 export let createReducer = actions =>
-  function(state, action) {
+  function(id, state, action) {
     return action && actions[action.id]
       ? //this is the bound request handler
         actions[action.id].call(this, state, action)
@@ -45,14 +46,14 @@ export let store = (() => {
       children = [],
       initialize = x => x,
       requestHandler = _request,
-      id
+      id = "",
+      vm = {}
     } = props;
-
     let [child] = children;
 
     let cachedComponent = util.lens(id, _componentTree);
     if (!cachedComponent) {
-      _state = deepmerge(initialState, _state);
+      _state = deepmerge(flatten.unflatten({ [id]: initialState }), _state);
       _actions = Object.assign(_actions, flatten(actions, " "));
       _reducer = createReducer(_actions);
 
@@ -60,8 +61,9 @@ export let store = (() => {
         //use the component specific request handler fallback to global
         let newState = _reducer.call(
           util.type.isFunction(this) ? this : _request,
+          id,
           _state,
-          Object.assign(action, { id })
+          Object.assign(action)
         );
         let async = util.isPromise(newState);
         if (async) {
@@ -97,24 +99,26 @@ export let store = (() => {
     //actions may be nested and will be flattened. space is used as the delimeter
     //to differentiate from the normal . access with lenses
 
+    let dispatch = curry(_dispatch.bind(requestHandler));
+    let state = _state;
+    let store = {
+      state,
+      dispatch,
+      id,
+      vm: map(viewAction => viewAction.bind(null, store), vm)
+    };
     return html`
-      <${Fragment}
-        >${child({
-          state: _state,
-          dispatch: curry(_dispatch.bind(requestHandler))
-        })}<//
-      >
+      <${Fragment}>${child(store)}<//>
     `;
   };
   storeWrapper.setGlobalRequestHandler = handler => {
-    request = handler;
+    _request = handler;
   };
   storeWrapper.dispatch = (...args) => _dispatch.call(_request, ...args);
   storeWrapper.getState = () => _state;
   return storeWrapper;
 })();
 
-store.createReducer = createReducer;
 store.baseActions = baseActions;
 
 export default store;

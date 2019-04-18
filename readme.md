@@ -1,6 +1,6 @@
 some common utilities and patterns for kibo-ng themes
 
-##goals
+## goals
 
 - create a reusable/composable component library
 - improve the build theme tools including continuous integration

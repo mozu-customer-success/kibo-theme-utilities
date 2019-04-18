@@ -37,6 +37,10 @@ export const mixin = (proto, ...sources) => {
   return Object.assign(Object.create(proto), ...sources);
 };
 
+export const isServer = new Function(
+  "try {return this===global;}catch(e){return false;}"
+)();
+
 export const type = [
   "Object",
   "Null",
@@ -229,6 +233,7 @@ export default {
   limitLogExposure,
   // globalEventBus,
   noop,
+  isServer,
   log,
   once,
   id,
@@ -246,15 +251,6 @@ export default {
   isPromise,
   $,
   $$,
-  printDiv: function(elemIdentifier) {
-    var $divToPrint = $(elemIdentifier);
-    var newWindow = window.open();
-    newWindow.document.write($divToPrint.html());
-    newWindow.document.close();
-    newWindow.focus();
-    newWindow.print();
-    newWindow.close();
-  },
   prop: function(v, pure = false) {
     var property = function(x) {
       if (x !== undefined) v = pure ? clone(x) : x;

@@ -4,21 +4,49 @@ import curryN from "ramda/src/curryN";
 
 export let adapters = {};
 
-export default curryN(2, (options = {}, WrappedComponent) => {
-  // let { adapters = [], name = "meToo" } = options;
-  // WrappedComponent.adapters = adapters.reduce((acc, key) => {
-  //   if (type.isFunction(adapters[key]))
-  //     acc[key] = adapters[key](options, WrappedComponent);
-  //   return acc;
-  // }, {});
+export default curryN(
+  2,
+  (
+    options = {
+      preserveElement: true
+    },
+    WrappedComponent = () => null
+  ) => {
+    WrappedComponent.methods.render = (
+      topLevelProps = {
+        style: {},
+        id: "",
+        validation: {}
+      },
+      container = {
+        view: {},
+        type: "backbone"
+      }
+    ) => {
+      if (
+        options.preserveElement &&
+        container.type === "backbone" &&
+        container.view &&
+        !container.view.render.wrapped
+      ) {
+        container.view.render = (...args) => {
+          let component = document.getElementById(id);
+          container.view.render(...args);
+          let container = document.getElementById(id + "-container");
+          container.replaceChild(component);
+        };
+        container.view.render.wrapped = true;
+      }
+      //manage the state tree by passing a unique id to the component props
+      topLevelProps.id =
+        WrappedComponent.properties.id +
+        (topLevelProps.id ? "." + topLevelProps.id : "");
+      return render(
+        h(WrappedComponent, topLevelProps),
+        document.getElementById(topLevelProps.id + "-container")
+      );
+    };
 
-  let id = WrappedComponent.properties.id;
-
-  WrappedComponent.methods.render = (props = {}) =>
-    render(
-      h(WrappedComponent, props),
-      document.getElementById(id + "-container")
-    );
-
-  return WrappedComponent;
-});
+    return WrappedComponent;
+  }
+);

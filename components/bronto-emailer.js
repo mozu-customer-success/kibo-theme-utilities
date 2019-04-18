@@ -175,7 +175,7 @@ export let component = props => {
         if (props.customView) {
           //some tools here to overwrite the innards
           //some of this could be standardized with hooks
-          //would be cool to expose the preact hooks like useEffect
+          //would be cool to expose useEffect
           //to the consumer/adapter
           return html`
             ${props.customView()}
@@ -190,6 +190,7 @@ export let component = props => {
               state.loading ? classes.loading : ""
             ])}
             id="${id}"
+            method="POST"
             novalidate=${!!props.novalidate}
           >
             <div

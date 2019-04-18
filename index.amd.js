@@ -339,11 +339,11 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
 
   var nativeWeakMap = typeof WeakMap === 'function' && /native code/.test(functionToString.call(WeakMap));
 
-  var id = 0;
+  var id$1 = 0;
   var postfix = Math.random();
 
   var uid = function (key) {
-    return 'Symbol('.concat(key === undefined ? '' : key, ')_', (++id + postfix).toString(36));
+    return 'Symbol('.concat(key === undefined ? '' : key, ')_', (++id$1 + postfix).toString(36));
   };
 
   var shared$1 = shared('keys');
@@ -1993,6 +1993,21 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     return _typeof(obj);
   }
 
+  function _defineProperty(obj, key, value) {
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+
+    return obj;
+  }
+
   function _taggedTemplateLiteral(strings, raw) {
     if (!raw) {
       raw = strings.slice(0);
@@ -2401,7 +2416,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   var $ = document.querySelector;
   var $$ = document.querySelectorAll;
   var noop = function noop() {};
-  var id$1 = function id(x) {
+  var id$2 = function id(x) {
     return x;
   };
   var head$1 = function head(list) {
@@ -2437,6 +2452,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
 
     return Object.assign.apply(Object, [Object.create(proto)].concat(sources));
   };
+  var isServer = new Function("try {return this===global;}catch(e){return false;}")();
   var type$1 = ["Object", "Null", "Undefined", "Array", "Number", "String", "Function", "Boolean", "Promise"].reduce(function (a, t) {
     a["is".concat(t)] = function (v) {
       return a(v) === t;
@@ -2639,9 +2655,10 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     limitLogExposure: limitLogExposure,
     // globalEventBus,
     noop: noop,
+    isServer: isServer,
     log: log,
     once: once,
-    id: id$1,
+    id: id$2,
     type: type$1,
     head: head$1,
     tail: tail,
@@ -2656,15 +2673,6 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     isPromise: isPromise,
     $: $,
     $$: $$,
-    printDiv: function printDiv(elemIdentifier) {
-      var $divToPrint = $(elemIdentifier);
-      var newWindow = window.open();
-      newWindow.document.write($divToPrint.html());
-      newWindow.document.close();
-      newWindow.focus();
-      newWindow.print();
-      newWindow.close();
-    },
     prop: function prop(v) {
       var pure = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
 
@@ -4948,53 +4956,12 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
         return comp;
       }, component);
     };
-  }; // export let createReducer = (request, actions) => (state, action) =>
-  //   action && actions[action.id]
-  //     ? actions[action.id].call(request, state, action)
-  //     : util.log(state, `invalid action ${action && action.id}`);
-  // export let useReducer = (() => {
-  //   let _actions = {}
-  //   let reducer = x => x
-  //   let dispatch = function(action) {
-  //     let newState = reducer(_state, action);
-  //     if (util.isPromise(newState)) {
-  //       return newState.then(response => {
-  //         _state = response;
-  //         if (this.setState && !action.silent) this.setState({});
-  //       });
-  //     }
-  //     _state = newState;
-  //     if (this.setState && !action.silent) this.setState({});
-  //   };
-  //   let create = function(
-  //     actions = {},
-  //     initialState = {},
-  //     initialAction
-  //   ) {
-  //     //this is root node of component
-  //     _actions = Object.assign(_actions, flatten(actions, " "));
-  //     if (initialAction) {
-  //       dispatch.call(
-  //         this,
-  //         reducer,
-  //         Object.assign(initialAction, { silent: true })
-  //       );
-  //     }
-  //     return [_state, dispatch.bind(this, reducer)];
-  //   };
-  //   //global dispatch
-  //   reduce.getState = () => _state;
-  //   reduce.
-  //   return create;
-  // })();
-
-  var createVm = function createVm(viewActions) {
-    return function (dispatch) {
-      return map_1(function (handler) {
-        return handler(dispatch);
-      }, viewActions);
-    };
   };
+  var createVm = curry_1(function (viewActions, dispatch, state) {
+    return map_1(function (handler) {
+      return handler.bind(null, dispatch, state);
+    }, viewActions);
+  });
   var tools = {
     html: html$1,
     preact: preact$1,
@@ -5386,7 +5353,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   var lensPath_1 = lensPath;
 
   function _templateObject$1() {
-    var data = _taggedTemplateLiteral(["\n      <", "\n        >", "<//\n      >\n    "]);
+    var data = _taggedTemplateLiteral(["\n      <", ">", "<//>\n    "]);
 
     _templateObject$1 = function _templateObject() {
       return data;
@@ -5409,7 +5376,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     }
   };
   var createReducer = function createReducer(actions) {
-    return function (state, action) {
+    return function (id, state, action) {
       return action && actions[action.id] ? //this is the bound request handler
       actions[action.id].call(this, state, action) : utilities.log(state, "invalid action ".concat(action && action.id));
     };
@@ -5440,7 +5407,10 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
           _props$initialize = props.initialize,
           _props$requestHandler = props.requestHandler,
           requestHandler = _props$requestHandler === void 0 ? _request : _props$requestHandler,
-          id = props.id;
+          _props$id = props.id,
+          id = _props$id === void 0 ? "" : _props$id,
+          _props$vm = props.vm,
+          vm = _props$vm === void 0 ? {} : _props$vm;
 
       var _children = _slicedToArray(children, 1),
           child = _children[0];
@@ -5448,15 +5418,13 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
       var cachedComponent = utilities.lens(id, _componentTree);
 
       if (!cachedComponent) {
-        _state = umd(initialState, _state);
+        _state = umd(flat.unflatten(_defineProperty({}, id, initialState)), _state);
         _actions = Object.assign(_actions, flat(actions, " "));
         _reducer = createReducer(_actions);
 
         _dispatch2 = function _dispatch(id, action) {
           //use the component specific request handler fallback to global
-          var newState = _reducer.call(utilities.type.isFunction(this) ? this : _request, _state, Object.assign(action, {
-            id: id
-          }));
+          var newState = _reducer.call(utilities.type.isFunction(this) ? this : _request, id, _state, Object.assign(action));
 
           var async = utilities.isPromise(newState);
 
@@ -5495,14 +5463,21 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
       //to differentiate from the normal . access with lenses
 
 
-      return html$1(_templateObject$1(), Fragment, child({
-        state: _state,
-        dispatch: curry_1(_dispatch2.bind(requestHandler))
-      }));
+      var dispatch = curry_1(_dispatch2.bind(requestHandler));
+      var state = _state;
+      var store = {
+        state: state,
+        dispatch: dispatch,
+        id: id,
+        vm: map_1(function (viewAction) {
+          return viewAction.bind(null, store);
+        }, vm)
+      };
+      return html$1(_templateObject$1(), Fragment, child(store));
     };
 
     storeWrapper.setGlobalRequestHandler = function (handler) {
-      request = handler;
+      _request = handler;
     };
 
     storeWrapper.dispatch = function () {
@@ -5521,7 +5496,6 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
 
     return storeWrapper;
   }();
-  store$2.createReducer = createReducer;
   store$2.baseActions = baseActions;
 
   var getDynamicStyles_1 = createCommonjsModule(function (module, exports) {
@@ -10211,18 +10185,42 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   });
 
   var withAdapter = curryN_1(2, function () {
-    var WrappedComponent = arguments.length > 1 ? arguments[1] : undefined;
-    // let { adapters = [], name = "meToo" } = options;
-    // WrappedComponent.adapters = adapters.reduce((acc, key) => {
-    //   if (type.isFunction(adapters[key]))
-    //     acc[key] = adapters[key](options, WrappedComponent);
-    //   return acc;
-    // }, {});
-    var id = WrappedComponent.properties.id;
+    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
+      preserveElement: true
+    };
+    var WrappedComponent = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {
+      return null;
+    };
 
     WrappedComponent.methods.render = function () {
-      var props = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      return render(h(WrappedComponent, props), document.getElementById(id + "-container"));
+      var topLevelProps = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
+        style: {},
+        id: "",
+        validation: {}
+      };
+      var container = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {
+        view: {},
+        type: "backbone"
+      };
+
+      if (options.preserveElement && container.type === "backbone" && container.view && !container.view.render.wrapped) {
+        container.view.render = function () {
+          var _container$view;
+
+          var component = document.getElementById(id);
+
+          (_container$view = container.view).render.apply(_container$view, arguments);
+
+          var container = document.getElementById(id + "-container");
+          container.replaceChild(component);
+        };
+
+        container.view.render.wrapped = true;
+      } //manage the state tree by passing a unique id to the component props
+
+
+      topLevelProps.id = WrappedComponent.properties.id + (topLevelProps.id ? "." + topLevelProps.id : "");
+      return render(h(WrappedComponent, topLevelProps), document.getElementById(topLevelProps.id + "-container"));
     };
 
     return WrappedComponent;
@@ -10593,7 +10591,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   var join_1 = join;
 
   function _templateObject3() {
-    var data = _taggedTemplateLiteral(["\n          <form\n            onsubmit=", "\n            data-action=\"submit\"\n            class=", "\n            id=\"", "\"\n            novalidate=", "\n          >\n            <div\n              class=\"g-recaptcha\"\n              data-sitekey=", "\n              data-callback=\"captchaSuccess\"\n              data-error-callback=\"captchaError\"\n              data-expired-callback=\"captchaError\"\n              data-size=\"invisible\"\n              ref=", "\n            ></div>\n            <div class=", ">\n              <label for=\"recipient\" className=\"required\">Recipient</label>\n              <input\n                name=\"recipient\"\n                type=\"email\"\n                class=", "\n                oninput=", "\n                value=", "\n                placeholder=\"one@a.time\"\n                required\n              />\n              <span class=", " for=\"recipient\"\n                >", "</span\n              >\n            </div>\n            <div class=", ">\n              <label for=\"message\" className=\"required\">Message</label>\n              <input\n                name=\"message\"\n                type=\"text\"\n                class=", "\n                oninput=", "\n                value=", "\n                placeholder=\"I like your sleeves\"\n                required\n              />\n              <span class=", " for=\"message\"\n                >", "</span\n              >\n            </div>\n            <button type=\"submit\" className=", ">Send</button>\n          </form>\n        "]);
+    var data = _taggedTemplateLiteral(["\n          <form\n            onsubmit=", "\n            data-action=\"submit\"\n            class=", "\n            id=\"", "\"\n            method=\"POST\"\n            novalidate=", "\n          >\n            <div\n              class=\"g-recaptcha\"\n              data-sitekey=", "\n              data-callback=\"captchaSuccess\"\n              data-error-callback=\"captchaError\"\n              data-expired-callback=\"captchaError\"\n              data-size=\"invisible\"\n              ref=", "\n            ></div>\n            <div class=", ">\n              <label for=\"recipient\" className=\"required\">Recipient</label>\n              <input\n                name=\"recipient\"\n                type=\"email\"\n                class=", "\n                oninput=", "\n                value=", "\n                placeholder=\"one@a.time\"\n                required\n              />\n              <span class=", " for=\"recipient\"\n                >", "</span\n              >\n            </div>\n            <div class=", ">\n              <label for=\"message\" className=\"required\">Message</label>\n              <input\n                name=\"message\"\n                type=\"text\"\n                class=", "\n                oninput=", "\n                value=", "\n                placeholder=\"I like your sleeves\"\n                required\n              />\n              <span class=", " for=\"message\"\n                >", "</span\n              >\n            </div>\n            <button type=\"submit\" className=", ">Send</button>\n          </form>\n        "]);
 
     _templateObject3 = function _templateObject3() {
       return data;
@@ -10631,7 +10629,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
    */
   // a handfull of optimistic coding and a spoonfull of syntactic sugar
 
-  var id$2 = "bronto-emailer"; // export let prerender = `
+  var id$3 = "bronto-emailer"; // export let prerender = `
   //   {% if themeSettings.recaptchaSiteKey %}
   //     <script src='https://www.google.com/recaptcha/api.js' async defer></script>
   //   {% endif %}
@@ -10754,7 +10752,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
       submit: submit,
       handleInput: handleInput
     });
-    return html$1(_templateObject$4(), store$2, initialState, actions, props.requestHandler, id$2, function (_ref) {
+    return html$1(_templateObject$4(), store$2, initialState, actions, props.requestHandler, id$3, function (_ref) {
       var dispatch = _ref.dispatch,
           state = _ref.state;
       var vm = bindVm(dispatch);
@@ -10763,12 +10761,12 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
       if (props.customView) {
         //some tools here to overwrite the innards
         //some of this could be standardized with hooks
-        //would be cool to expose the preact hooks like useEffect
+        //would be cool to expose useEffect
         //to the consumer/adapter
         return html$1(_templateObject2(), props.customView());
       }
 
-      return html$1(_templateObject3(), vm.submit(state), join_1(" ", [classes.form, state.loading ? classes.loading : ""]), id$2, !!props.novalidate, props.recaptchaKey, function (element) {
+      return html$1(_templateObject3(), vm.submit(state), join_1(" ", [classes.form, state.loading ? classes.loading : ""]), id$3, !!props.novalidate, props.recaptchaKey, function (element) {
         if (element && window.grecaptcha) {
           try {
             window.grecaptcha.render(element);
@@ -10778,7 +10776,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     });
   };
   component.properties = {
-    id: id$2,
+    id: id$3,
     actions: actions,
     style: style,
     validation: validation
@@ -11162,7 +11160,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
 
     return data;
   }
-  var id$3 = "message-bar";
+  var id$4 = "message-bar";
   var style$1 = {
     container: {
       "margin-bottom": "10px",
@@ -11214,11 +11212,11 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     var bindVm = createVm({
       remove: remove
     });
-    return html$1(_templateObject$5(), store$2, initialState$1, actions$1, id$3, function (_ref) {
+    return html$1(_templateObject$5(), store$2, initialState$1, actions$1, id$4, function (_ref) {
       var dispatch = _ref.dispatch,
           state = _ref.state;
       var vm = bindVm(dispatch);
-      return html$1(_templateObject2$1(), id$3, classes.container, compose_1(Object.values, mapObjIndexed_1(function (messageGroup, type) {
+      return html$1(_templateObject2$1(), id$4, classes.container, compose_1(Object.values, mapObjIndexed_1(function (messageGroup, type) {
         return html$1(_templateObject3$1(), type, classes[type] || "", messageGroup.length ? messageGroup.map(function (message, dex) {
           return html$1(_templateObject4(), dex, message.messageId, message.autoFade ? function (ref) {
             //it would be better to use velocity here imo but that would increase the build size
@@ -11240,7 +11238,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   component$1.properties = {
     actions: actions$1,
     style: style$1,
-    id: id$3
+    id: id$4
   };
   component$1.methods = {};
   var message = composeWrappers(withAdapter({}), withStyle(style$1))(component$1);
