@@ -10592,8 +10592,18 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   var join = /*#__PURE__*/invoker_1(1, 'join');
   var join_1 = join;
 
+  function _templateObject4() {
+    var data = _taggedTemplateLiteral(["\n                  <div\n                    class=", "\n                    data-sitekey=", "\n                    data-callback=\"captchaSuccess\"\n                    data-error-callback=\"captchaError\"\n                    data-expired-callback=\"captchaError\"\n                    data-size=", "\n                    ref=", "\n                  ></div>\n                "]);
+
+    _templateObject4 = function _templateObject4() {
+      return data;
+    };
+
+    return data;
+  }
+
   function _templateObject3() {
-    var data = _taggedTemplateLiteral(["\n          <form\n            onsubmit=", "\n            data-action=\"submit\"\n            class=", "\n            id=\"", "\"\n            novalidate=", "\n          >\n            <div\n              class=\"g-recaptcha\"\n              data-sitekey=", "\n              data-callback=\"captchaSuccess\"\n              data-error-callback=\"captchaError\"\n              data-expired-callback=\"captchaError\"\n              data-size=\"invisible\"\n              ref=", "\n            ></div>\n            <div class=", ">\n              <label for=\"recipient\" className=\"required\">Recipient</label>\n              <input\n                name=\"recipient\"\n                type=\"email\"\n                class=", "\n                oninput=", "\n                value=", "\n                placeholder=\"one@a.time\"\n                required\n              />\n              <span class=", " for=\"recipient\"\n                >", "</span\n              >\n            </div>\n            <div class=", ">\n              <label for=\"message\" className=\"required\">Message</label>\n              <input\n                name=\"message\"\n                type=\"text\"\n                class=", "\n                oninput=", "\n                value=", "\n                placeholder=\"I like your sleeves\"\n                required\n              />\n              <span class=", " for=\"message\"\n                >", "</span\n              >\n            </div>\n            <button type=\"submit\" className=", ">Send</button>\n          </form>\n        "]);
+    var data = _taggedTemplateLiteral(["\n          <form\n            onsubmit=", "\n            data-action=\"submit\"\n            class=", "\n            id=\"", "\"\n            novalidate=", "\n          >\n            <div class=", ">\n              <label for=\"recipient\" className=\"required\"\n                >", "</label\n              >\n              <input\n                name=\"recipient\"\n                type=\"email\"\n                class=", "\n                oninput=", "\n                value=", "\n                placeholder=", "\n                required\n              />\n              <span class=", " for=\"recipient\"\n                >", "</span\n              >\n            </div>\n            <div\n              class=", "\n            >\n              <label for=\"message\" className=\"required\"\n                >", "</label\n              >\n              <input\n                name=\"message\"\n                type=\"text\"\n                class=", "\n                oninput=", "\n                value=", "\n                placeholder=", "\n                required\n              />\n              <span class=", " for=\"message\"\n                >", "</span\n              >\n            </div>\n            ", "\n\n            <button type=\"submit\" className=", ">\n              ", "\n            </button>\n          </form>\n        "]);
 
     _templateObject3 = function _templateObject3() {
       return data;
@@ -10666,14 +10676,14 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
         console.log(response);
         action.triggerMessage({
           type: "success",
-          value: "Great Success!",
+          value: action.successMessage || "Great Succcess!",
           autoFade: true
         });
       }).catch(function (err) {
         console.log(err);
         action.triggerMessage({
           type: "error",
-          value: "User Error!",
+          value: action.errorMessage || "User Error!",
           autoFade: true
         });
       });
@@ -10707,6 +10717,13 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
     },
     validation: {
       color: "crimson"
+    },
+    message: {},
+    recaptcha: {
+      float: "right",
+      "&:after": {
+        clear: "both"
+      }
     }
   };
   var validation = {
@@ -10728,7 +10745,15 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
 
     var submit = curry_1(function (dispatch, state, event) {
       event.preventDefault();
-      if (window.grecaptcha) window.grecaptcha.execute();
+
+      if (window.grecaptcha && props.recaptchaSize === "invisible") {
+        window.grecaptcha.execute();
+      }
+
+      dispatch("mutate", {
+        path: "validation",
+        value: {}
+      });
       var invalid = validator(state);
 
       if (invalid) {
@@ -10741,7 +10766,9 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
 
       dispatch("sendEmail", {
         triggerMessage: dispatch("triggerMessage"),
-        captchaPromise: captchaPromise
+        captchaPromise: captchaPromise,
+        successMessage: props.successMessage,
+        errorMessage: props.errorMessage
       });
     });
     var handleInput = curry_1(function (dispatch, path, event) {
@@ -10768,13 +10795,13 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
         return html$1(_templateObject2(), props.customView());
       }
 
-      return html$1(_templateObject3(), vm.submit(state), join_1(" ", [classes.form, state.loading ? classes.loading : ""]), id$2, !!props.novalidate, props.recaptchaKey, function (element) {
+      return html$1(_templateObject3(), vm.submit(state), join_1(" ", [classes.form, state.loading ? classes.loading : ""]), id$2, !!props.novalidate, join_1(" ", [classes.formfield, "formfield"]), props.recipientLabel || "Recipient", classes.input, vm.handleInput("recipient"), prop("recipient"), props.recipientPlaceholder || "", classes.validation, prop("validation.recipient"), join_1(" ", [classes.formfield, "formfield", classes.message]), props.messageLabel || "Message", classes.input, vm.handleInput("message"), prop("message"), props.messageLabel || "", classes.validation, prop("validation.message"), props.recaptchaKey ? html$1(_templateObject4(), "g-recaptcha " + classes.recaptcha, props.recaptchaKey, props.recaptchaSize || "invisible", function (element) {
         if (element && window.grecaptcha) {
           try {
             window.grecaptcha.render(element);
           } catch (e) {}
         }
-      }, join_1(" ", [classes.formfield, "formfield"]), classes.input, vm.handleInput("recipient"), prop("recipient"), classes.validation, prop("validation.recipient"), join_1(" ", [classes.formfield, "formfield"]), classes.input, vm.handleInput("message"), prop("message"), classes.validation, prop("validation.message"), classes.submit);
+      }) : null, classes.submit, props.submitText || "Send");
     });
   };
   component.properties = {
@@ -11123,10 +11150,10 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
   });
   var mapObjIndexed_1 = mapObjIndexed;
 
-  function _templateObject4() {
+  function _templateObject4$1() {
     var data = _taggedTemplateLiteral(["\n                            <li\n                              key=", "\n                              message-id=", "\n                              ref=", "\n                              class=", "\n                            >\n                              ", "\n                            </li>\n                          "]);
 
-    _templateObject4 = function _templateObject4() {
+    _templateObject4$1 = function _templateObject4() {
       return data;
     };
 
@@ -11220,7 +11247,7 @@ define(['hyprlivecontext', 'modules/jquery-mozu', 'underscore'], function (hyprC
       var vm = bindVm(dispatch);
       return html$1(_templateObject2$1(), id$3, classes.container, compose_1(Object.values, mapObjIndexed_1(function (messageGroup, type) {
         return html$1(_templateObject3$1(), type, classes[type] || "", messageGroup.length ? messageGroup.map(function (message, dex) {
-          return html$1(_templateObject4(), dex, message.messageId, message.autoFade ? function (ref) {
+          return html$1(_templateObject4$1(), dex, message.messageId, props.autoFade !== false && message.autoFade ? function (ref) {
             //it would be better to use velocity here imo but that would increase the build size
             //and is not worth it for one animation here.
             if (ref) {

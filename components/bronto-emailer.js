@@ -59,7 +59,7 @@ export let actions = {
         console.log(response);
         action.triggerMessage({
           type: "success",
-          value: "Great Success!",
+          value: action.successMessage || "Great Succcess!",
           autoFade: true
         });
       })
@@ -67,7 +67,7 @@ export let actions = {
         console.log(err);
         action.triggerMessage({
           type: "error",
-          value: "User Error!",
+          value: action.errorMessage || "User Error!",
           autoFade: true
         });
       });
@@ -104,6 +104,13 @@ export let style = {
   },
   validation: {
     color: "crimson"
+  },
+  message: {},
+  recaptcha: {
+    float: "right",
+    "&:after": {
+      clear: "both"
+    }
   }
 };
 
@@ -137,7 +144,13 @@ export let component = props => {
   //vm methods
   let submit = curry((dispatch, state, event) => {
     event.preventDefault();
-    if (window.grecaptcha) window.grecaptcha.execute();
+    if (window.grecaptcha && props.recaptchaSize === "invisible") {
+      window.grecaptcha.execute();
+    }
+    dispatch("mutate", {
+      path: "validation",
+      value: {}
+    });
     let invalid = validator(state);
     if (invalid) {
       return dispatch("mutate", {
@@ -148,7 +161,9 @@ export let component = props => {
     //if the triggerMessage action doesn't exist this will just do nothing
     dispatch("sendEmail", {
       triggerMessage: dispatch("triggerMessage"),
-      captchaPromise
+      captchaPromise,
+      successMessage: props.successMessage,
+      errorMessage: props.errorMessage
     });
   });
   let handleInput = curry((dispatch, path, event) => {
@@ -192,52 +207,69 @@ export let component = props => {
             id="${id}"
             novalidate=${!!props.novalidate}
           >
-            <div
-              class="g-recaptcha"
-              data-sitekey=${props.recaptchaKey}
-              data-callback="captchaSuccess"
-              data-error-callback="captchaError"
-              data-expired-callback="captchaError"
-              data-size="invisible"
-              ref=${element => {
-                if (element && window.grecaptcha) {
-                  try {
-                    window.grecaptcha.render(element);
-                  } catch (e) {}
-                }
-              }}
-            ></div>
             <div class=${join(" ", [classes.formfield, "formfield"])}>
-              <label for="recipient" className="required">Recipient</label>
+              <label for="recipient" className="required"
+                >${props.recipientLabel || "Recipient"}</label
+              >
               <input
                 name="recipient"
                 type="email"
                 class=${classes.input}
                 oninput=${vm.handleInput("recipient")}
                 value=${prop("recipient")}
-                placeholder="one@a.time"
+                placeholder=${props.recipientPlaceholder || ""}
                 required
               />
               <span class=${classes.validation} for="recipient"
                 >${prop("validation.recipient")}</span
               >
             </div>
-            <div class=${join(" ", [classes.formfield, "formfield"])}>
-              <label for="message" className="required">Message</label>
+            <div
+              class=${join(" ", [
+                classes.formfield,
+                "formfield",
+                classes.message
+              ])}
+            >
+              <label for="message" className="required"
+                >${props.messageLabel || "Message"}</label
+              >
               <input
                 name="message"
                 type="text"
                 class=${classes.input}
                 oninput=${vm.handleInput("message")}
                 value=${prop("message")}
-                placeholder="I like your sleeves"
+                placeholder=${props.messageLabel || ""}
                 required
               />
               <span class=${classes.validation} for="message"
                 >${prop("validation.message")}</span
               >
             </div>
-            <button type="submit" className=${classes.submit}>Send</button>
+            ${props.recaptchaKey
+              ? html`
+                  <div
+                    class=${"g-recaptcha " + classes.recaptcha}
+                    data-sitekey=${props.recaptchaKey}
+                    data-callback="captchaSuccess"
+                    data-error-callback="captchaError"
+                    data-expired-callback="captchaError"
+                    data-size=${props.recaptchaSize || "invisible"}
+                    ref=${element => {
+                      if (element && window.grecaptcha) {
+                        try {
+                          window.grecaptcha.render(element);
+                        } catch (e) {}
+                      }
+                    }}
+                  ></div>
+                `
+              : null}
+
+            <button type="submit" className=${classes.submit}>
+              ${props.submitText || "Send"}
+            </button>
           </form>
         `;
       }}<//
