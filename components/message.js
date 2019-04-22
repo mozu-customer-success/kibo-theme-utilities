@@ -83,7 +83,7 @@ export let component = props => {
                             <li
                               key=${dex}
                               message-id=${message.messageId}
-                              ref=${message.autoFade
+                              ref=${props.autoFade !== false && message.autoFade
                                 ? ref => {
                                     //it would be better to use velocity here imo but that would increase the build size
                                     //and is not worth it for one animation here.
