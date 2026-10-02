@@ -13,7 +13,7 @@
   "author": "Kevin Brown",
   "license": "ISC",
   "devDependencies": {
-    "@babel/core": "^7.4.0",
+    "@babel/core": "^7.29.6",
     "@babel/preset-env": "^7.4.2",
     "nodemon": "^1.18.10",
     "prettier": "^1.16.4",
